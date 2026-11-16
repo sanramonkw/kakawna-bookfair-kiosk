@@ -163,7 +163,7 @@ button{cursor:pointer}
 .fleuron{color:#B8925A;font-style:normal;margin-inline-end:.35rem}
 .page.is-turning .quote-text{opacity:0;transform:translateY(.35rem)}
 .page.is-turning .quote-by{opacity:0}
-.page-sm{min-height:0;width:min(86vw,30rem);padding:3rem 2.2rem 2rem}
+.page-sm{min-height:0;width:min(86vw,30rem);padding:4.8rem 2.2rem 2rem}
 .page-sm .quote-text{font-size:1.7rem}
 .page-sm .quote-text:lang(ar){font-size:1.9rem}
 
@@ -437,10 +437,10 @@ button{cursor:pointer}
 .contact .qr{box-shadow:0 .4rem 1rem -.4rem rgba(46,58,49,.35);border:1px solid rgba(96,117,100,.25);width:5.6rem;height:5.6rem;border-radius:10px;display:block;flex:none}
 .contact-list{list-style:none;margin:0;padding:0;font-size:1rem;line-height:1.6;color:var(--sage-night);text-align:start}
 .contact-list li:first-child{font-weight:700}
-/* Google review prompt: small and secondary, under the contact block */
-.review{display:flex;align-items:center;gap:.8rem;margin-top:0;padding-top:.6rem;border-top:1px solid rgba(96,117,100,.2)}
-.review-qr{width:4.8rem;height:4.8rem;border-radius:8px;display:block;flex:none;border:1px solid rgba(96,117,100,.2);background:#fff}
-.review-text{text-align:start;font-size:.9rem;line-height:1.4;color:var(--ink-soft)}
+/* Google review prompt on the thank-you screen: secondary to the thank-you, but big enough to scan */
+.review{display:flex;align-items:center;gap:1.2rem;padding:1rem 1.4rem;border-radius:16px;background:rgba(255,253,246,.7);border:1px solid rgba(184,146,90,.35)}
+.review-qr{width:7rem;height:7rem;border-radius:10px;display:block;flex:none;background:#fff}
+.review-text{text-align:start;font-size:1.1rem;line-height:1.5;color:var(--ink-soft)}
 .review-text p{margin:0}
 .review-text p[lang="ar"]{text-align:left;font-weight:600;color:var(--sage-deep)}
 .input{background:var(--card);border:1.5px solid rgba(96,117,100,.4)}
@@ -485,13 +485,6 @@ button{cursor:pointer}
           <div class="contact" dir="ltr">
             <img id="qrImg" class="qr" alt="QR code for order.kakawna.com" draggable="false">
             <ul class="contact-list"><li>order.kakawna.com</li><li>@kbykakawna</li><li>2220 9081 | 9009 0412</li></ul>
-          </div>
-          <div class="review" dir="ltr">
-            <img id="reviewQr" class="review-qr" alt="QR code to rate Kakawna on Google" draggable="false">
-            <div class="review-text">
-              <p lang="en">Why don't you show us some love?</p>
-              <p lang="ar" dir="rtl">قيمنا على قوقل</p>
-            </div>
           </div>
         </div>
       </div>
@@ -553,6 +546,13 @@ button{cursor:pointer}
           <figcaption class="quote-by"><span class="fleuron" aria-hidden="true">❦</span><span class="by-name" dir="auto"></span></figcaption>
         </figure>
         <p id="thanksBody" class="thanks-body"></p>
+        <div class="review" dir="ltr">
+          <img id="reviewQr" class="review-qr" alt="QR code to rate Kakawna on Google" draggable="false">
+          <div class="review-text">
+            <p lang="en">Why don't you show us some love?</p>
+            <p lang="ar" dir="rtl">قيمنا على قوقل</p>
+          </div>
+        </div>
         <div id="countdown" class="countdown" aria-hidden="true"><span></span></div>
         <p class="thanks-tap" data-i18n="thanksTap"></p>
       </div>
@@ -716,7 +716,7 @@ const CONFIG = {
   MAX_QUOTE_LENGTH: 140,
   LONG_QUOTE_AT: 90,               // quotes longer than this use a smaller type size
   IDLE_TIMEOUT_MS: 60000,          // back to the idle screen after 60 s without a touch
-  THANKS_SCREEN_MS: 5000,
+  THANKS_SCREEN_MS: 15000,          // long enough to scan the Google review QR; tap anywhere still finishes early
   COUNTER_MIN: 5,                  // the idle "readers joined" line appears once this many unique numbers entered
   NUDGE_AFTER_MS: 20000,           // the Start button ring appears after this long with nobody touching the screen
   SHELF_BASE_SPINES: 60,           // decorative spines always on the shelf; each entry adds one more until it is full
