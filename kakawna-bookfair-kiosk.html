@@ -203,10 +203,10 @@ button{cursor:pointer}
 .idle-cta{display:flex;flex-direction:column;align-items:center;gap:1rem}
 .idle-title{
   margin:0;font-family:var(--serif);font-weight:600;
-  font-size:2.7rem;line-height:1.15;max-width:22ch;color:var(--sage-night);text-wrap:balance;
+  font-size:3.2rem;line-height:1.12;max-width:14ch;color:var(--sage-night);text-wrap:balance;
 }
 .idle-title:lang(ar),[lang="ar"] .idle-title{line-height:1.45}
-.idle-sub{margin:0;font-size:1.15rem;color:var(--ink-soft);max-width:40ch;text-wrap:balance}
+.idle-sub{margin:0;font-size:1.15rem;color:var(--ink-soft);max-width:50ch;text-wrap:balance}
 .event-line{margin:.4rem 0 0;font-size:.9rem;color:var(--ink-soft)}
 .idle-count{margin:.1rem 0 0;font-size:.95rem;font-weight:600;color:var(--sage-deep)}
 
@@ -218,14 +218,15 @@ button{cursor:pointer}
   #wallCard .quote-text.is-long{font-size:2rem}
   #wallCard .quote-text:lang(ar){font-size:2.7rem}
   #wallCard .quote-text.is-long:lang(ar){font-size:2.2rem}
-  .idle-title{font-size:3.3rem}
+  .idle-title{font-size:4.2rem}
   .idle-sub{font-size:1.3rem}
   .btn-start{min-height:5rem;font-size:1.8rem;min-width:17rem}
 }
 
 /* Landscape: card on one side, call to action on the other */
 @media (orientation:landscape) and (min-aspect-ratio:5/4){
-  .idle-inner{flex-direction:row;justify-content:center;gap:5vw;text-align:start;padding-top:0}
+  .idle-inner{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:2rem 5vw;text-align:start;padding-top:0}
+  .idle-inner .idle-title{flex-basis:100%;max-width:none;text-align:center}
   .idle-cta{align-items:flex-start;max-width:38vw}
   .idle-title{font-size:3rem}
   #wallCard{width:min(46vw,36rem);min-height:22rem}
@@ -471,13 +472,13 @@ button{cursor:pointer}
     <!-- 1. Attract / idle screen -->
     <section id="screen-idle" class="screen is-active" aria-labelledby="idleTitle">
       <div class="inner idle-inner">
+        <h1 id="idleTitle" class="idle-title" data-i18n="idleTitle"></h1>
         <figure id="wallCard" class="page">
           <span class="ribbon" aria-hidden="true"></span>
           <blockquote class="quote-text" dir="auto"></blockquote>
           <figcaption class="quote-by"><span class="fleuron" aria-hidden="true">❦</span><span class="by-name" dir="auto"></span></figcaption>
         </figure>
         <div class="idle-cta">
-          <h1 id="idleTitle" class="idle-title" data-i18n="idleTitle"></h1>
           <p class="idle-sub" data-i18n="idleSub"></p>
           <button type="button" id="startBtn" class="btn-primary btn-start" data-i18n="start"></button>
           <p class="event-line" data-i18n="eventLine"></p>
@@ -752,7 +753,7 @@ const CONFIG = {
   TEXT: {
     en: {
       langToggle: 'العربية',
-      idleTitle: 'Unleash the poet in you!',
+      idleTitle: 'Unleash the Poet in You!',
       idleSub: 'Type your own creative quote, and get in the draw for a special voucher from Kakawna. You have a bigger chance of winning if it’s about chocolate! 🍫',
       start: 'Start',
       eventLine: 'Kuwait International Book Fair, 18 to 28 November 2026',
