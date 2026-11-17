@@ -1,0 +1,473 @@
+{
+  "name": "Kakawna kiosk: live entries to Zoho Sheet",
+  "nodes": [
+    {
+      "id": "8cd5c872-736a-4390-8041-fe76c5ed88c6",
+      "name": "Kiosk webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "beca7473-8992-4ca8-b08d-4a16d65d57be",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kakawna-kiosk",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "52e975f1-a094-4b8b-8c76-7f9de88a93be",
+      "name": "Parse and check token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Kakawna kiosk batch: parse the body and check the secret token.\n// Set SECRET to the same value as \"Secret token\" in the kiosk's staff panel (Backup section).\nconst SECRET = 'CHANGE-ME-long-random-token';\n\nconst item = $input.first();\nlet body = item.json.body;\n\n// The kiosk sends JSON as text/plain (no CORS preflight), so the body may arrive\n// as an object, as a string, or only as raw binary data, depending on the n8n version.\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif ((!body || !body.source) && item.binary && item.binary.data) {\n  try { body = JSON.parse((await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8')); }\n  catch (e) { body = null; }\n}\n\nconst ok = !!body && body.source === 'kbykakawna-kiosk' && body.token === SECRET;\nconst receivedAt = new Date().toISOString();\nconst deviceId = ok ? String(body.deviceId || '') : '';\nconst yesNo = v => (v ? 'yes' : 'no');\n// Visitor text that starts like a formula (=, +, @) is stored as plain text, never run as a formula.\nconst safe = v => { const s = String(v == null ? '' : v).replace(/[\\r\\n]+/g, ' '); return /^[=+@]/.test(s) ? \"'\" + s : s; };\n\nconst rows = [];\nif (ok && Array.isArray(body.entries)) for (const e of body.entries) {\n  if (!e || !e.id) continue;\n  rows.push({ sheet: 'Entries', row: {\n    id: String(e.id), ts: String(e.ts || ''), name: safe(e.name), phone: String(e.phone || ''),\n    quote: safe(e.quote), language: String(e.language || ''),\n    hidden: yesNo(e.hidden), disqualified: yesNo(e.disqualified), deviceId, receivedAt } });\n}\nif (ok && Array.isArray(body.draws)) for (const d of body.draws) {\n  if (!d || !d.id) continue;\n  rows.push({ sheet: 'Draws', row: {\n    id: String(d.id), ts: String(d.ts || ''), name: safe(d.name), phone: String(d.phone || ''),\n    quote: safe(d.quote), entryId: String(d.entryId || ''), poolSize: String(Number(d.poolSize) || 0),\n    deviceId, receivedAt } });\n}\n\nreturn [{ json: { ok, rows, rowCount: rows.length } }];"
+      }
+    },
+    {
+      "id": "33df2ad7-683b-47b4-a294-0b32b2d37ccb",
+      "name": "Token OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "759f3506-b1d6-4339-a02e-1ef047aec73d",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7ee04e63-0a4b-4e5b-bfbd-44fa8bc7afb9",
+      "name": "Reply: unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        520
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":false,\"error\":\"unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "ec6deaf3-3690-4e3d-8d35-afb7666e7626",
+      "name": "Anything to save?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        280
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a53b0517-4cfc-437b-b467-34e2f0d367b3",
+              "leftValue": "={{ $json.rowCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "31bdcd65-71de-4e0f-927b-974be9cc3c02",
+      "name": "One item per row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One item per row (entries and draws), each tagged with its Zoho worksheet.\nreturn $input.first().json.rows.map(r => ({ json: r }));"
+      }
+    },
+    {
+      "id": "cfa328ad-d74d-4a8e-a7fd-c8d306b66319",
+      "name": "Zoho: update row by id",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheet.zoho.com/api/v2/PASTE-ZOHO-WORKBOOK-RESOURCE-ID",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "method",
+              "value": "worksheet.records.update"
+            },
+            {
+              "name": "worksheet_name",
+              "value": "={{ $json.sheet }}"
+            },
+            {
+              "name": "criteria",
+              "value": "={{ '\"id\"=\"' + $json.row.id.replace(/\"/g, '') + '\"' }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ JSON.stringify($json.row) }}"
+            },
+            {
+              "name": "first_match_only",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "oAuth2Api": {
+          "id": "5JbSMesPs2WXcB9m",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "id": "095a48d9-8467-4e9e-93c7-9d7e03e2497b",
+      "name": "Which rows are new?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Pair each Zoho update result with the row it was for (same order).\n// A row that matched nothing is new and must be added. Any Zoho failure stops the run,\n// so the webhook does not reply OK and the kiosk keeps the batch and retries later.\nconst results = $input.all();\nconst rows = $('One item per row').all();\nconst toAdd = { Entries: [], Draws: [] };\nresults.forEach((res, i) => {\n  const r = res.json || {};\n  if (r.status !== 'success') throw new Error('Zoho update failed: ' + JSON.stringify(r).slice(0, 300));\n  if (!(Number(r.no_of_affected_rows) > 0)) toAdd[rows[i].json.sheet].push(rows[i].json.row);\n});\nconst groups = Object.entries(toAdd).filter(([, list]) => list.length).map(([sheet, list]) => ({ sheet, rows: list }));\nreturn [{ json: { groups, addCount: groups.length } }];"
+      }
+    },
+    {
+      "id": "3db4e26d-bc1c-4586-9058-c8ddc0b91dfc",
+      "name": "Any new rows?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4d2da80a-1b18-4905-881a-85bec352b469",
+              "leftValue": "={{ $json.addCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000001",
+      "name": "One item per worksheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One item per worksheet that has new rows to add.\nreturn $input.first().json.groups.map(g => ({ json: g }));"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000002",
+      "name": "Zoho: add new rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheet.zoho.com/api/v2/PASTE-ZOHO-WORKBOOK-RESOURCE-ID",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "method",
+              "value": "worksheet.records.add"
+            },
+            {
+              "name": "worksheet_name",
+              "value": "={{ $json.sheet }}"
+            },
+            {
+              "name": "json_data",
+              "value": "={{ JSON.stringify($json.rows) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "oAuth2Api": {
+          "id": "5JbSMesPs2WXcB9m",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000004",
+      "name": "Check adds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Make sure Zoho accepted every add; otherwise fail so the kiosk retries.\nfor (const res of $input.all()) {\n  if ((res.json || {}).status !== 'success') throw new Error('Zoho add failed: ' + JSON.stringify(res.json).slice(0, 300));\n}\nreturn [{ json: { ok: true } }];"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000003",
+      "name": "Reply: ok",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Kiosk webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse and check token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse and check token": {
+      "main": [
+        [
+          {
+            "node": "Token OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token OK?": {
+      "main": [
+        [
+          {
+            "node": "Anything to save?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to save?": {
+      "main": [
+        [
+          {
+            "node": "One item per row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per row": {
+      "main": [
+        [
+          {
+            "node": "Zoho: update row by id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zoho: update row by id": {
+      "main": [
+        [
+          {
+            "node": "Which rows are new?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which rows are new?": {
+      "main": [
+        [
+          {
+            "node": "Any new rows?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any new rows?": {
+      "main": [
+        [
+          {
+            "node": "One item per worksheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per worksheet": {
+      "main": [
+        [
+          {
+            "node": "Zoho: add new rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zoho: add new rows": {
+      "main": [
+        [
+          {
+            "node": "Check adds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check adds": {
+      "main": [
+        [
+          {
+            "node": "Reply: ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

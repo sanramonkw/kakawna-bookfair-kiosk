@@ -1,0 +1,5 @@
+ENTRIES - click cell A1 of the "Entries" worksheet, then paste this line:
+id	ts	name	phone	quote	language	hidden	disqualified	deviceId	receivedAt
+
+DRAWS - click cell A1 of the "Draws" worksheet, then paste this line:
+id	ts	name	phone	quote	entryId	poolSize	deviceId	receivedAt
