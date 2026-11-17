@@ -206,6 +206,18 @@ button{cursor:pointer}
   font-size:3.2rem;line-height:1.12;max-width:14ch;color:var(--sage-night);text-wrap:balance;
 }
 .idle-title:lang(ar),[lang="ar"] .idle-title{line-height:1.45}
+.idle-title:lang(en){letter-spacing:.02em}
+/* the highlighted word: chocolate-brown ink on a hand-painted gold brush stroke */
+.hl{position:relative;display:inline-block;color:#6B4430;z-index:0;white-space:nowrap}
+.hl::after{
+  content:"";position:absolute;z-index:-1;left:-.1em;right:-.1em;bottom:.06em;height:.36em;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 24' preserveAspectRatio='none'%3E%3Cpath d='M5 13 C 38 6 92 3 142 6 S 188 9 197 7 L 195 17 C 158 20 108 22 62 20 S 14 22 3 19 Z' fill='%23B8925A' fill-opacity='.55'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  transform-origin:left center;animation:swash .9s cubic-bezier(.2,.7,.2,1) .25s both;
+}
+[dir="rtl"] .hl::after{transform-origin:right center}
+.idle-title:lang(ar) .hl::after{bottom:.12em}
+@keyframes swash{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.hl::after{animation:none}}
 .idle-sub{margin:0;font-size:1.15rem;color:var(--ink-soft);max-width:50ch;text-wrap:balance}
 .event-line{margin:.4rem 0 0;font-size:.9rem;color:var(--ink-soft)}
 .idle-count{margin:.1rem 0 0;font-size:.95rem;font-weight:600;color:var(--sage-deep)}
@@ -753,7 +765,7 @@ const CONFIG = {
   TEXT: {
     en: {
       langToggle: 'العربية',
-      idleTitle: 'Unleash the Poet in You!',
+      idleTitle: 'UNLEASH THE [POET] IN YOU!',   // [word] = highlighted
       idleSub: 'Type your own creative quote, and get in the draw for a special voucher from Kakawna. You have a bigger chance of winning if it’s about chocolate! 🍫',
       start: 'Start',
       eventLine: 'Kuwait International Book Fair, 18 to 28 November 2026',
@@ -787,7 +799,7 @@ const CONFIG = {
     },
     ar: {
       langToggle: 'English',
-      idleTitle: 'طلع الشاعر اللي بداخلك',
+      idleTitle: 'طلع [الشاعر] اللي بداخلك',   // [word] = highlighted
       idleSub: 'شاركنا بجملة من خيالك، وادخل السحب آخر المعرض وفوز بكوبون مميز من كاكاونا. ولو الجملة عن الشوكولاتة احسن واحسن! 🍫',
       start: 'ابدأ',
       eventLine: 'معرض الكويت الدولي للكتاب، من ١٨ إلى ٢٨ نوفمبر ٢٠٢٦',
@@ -975,12 +987,23 @@ const F = {
 /* ==========================================================================
    Language
    ========================================================================== */
+/* Headline: a word in [brackets] is wrapped in .hl (brown ink with a gold brush stroke that sweeps in). */
+function renderTitle() {
+  const el = $('#idleTitle');
+  el.textContent = '';
+  t('idleTitle').split(/\[(.+?)\]/).forEach((part, i) => {
+    if (!part) return;
+    if (i % 2) { const s = document.createElement('span'); s.className = 'hl'; s.textContent = part; el.appendChild(s); }
+    else el.appendChild(document.createTextNode(part));
+  });
+}
 function applyLang(lang) {
   state.lang = lang === 'en' ? 'en' : 'ar';
   const html = document.documentElement;
   html.lang = state.lang;
   html.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
   $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  renderTitle();
   $$('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
   const lb = $('#langBtn');
   lb.textContent = t('langToggle');
